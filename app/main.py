@@ -154,44 +154,50 @@ def disks():
 
 
 def sampler():
-    prev_net = psutil.net_io_counters(pernic=True)
-    prev_io = psutil.disk_io_counters()
-    prev_t = time.time()
-    psutil.cpu_percent(percpu=True)
-    model = cpu_model()
-    hostname = read(f"{HOST}/etc/hostname").strip() or os.uname().nodename
-    while True:
-        time.sleep(INTERVAL)
-        now = time.time()
-        dt = max(now - prev_t, 0.1)
-        net, cur_net = [], psutil.net_io_counters(pernic=True)
-        stats, addrs = psutil.net_if_stats(), psutil.net_if_addrs()
-        for nic, c in cur_net.items():
-            if nic.startswith(SKIP_NIC):
-                continue
-            p = prev_net.get(nic, c)
-            ip = next((a.address for a in addrs.get(nic, []) if a.family.name == "AF_INET"), "")
-            st = stats.get(nic)
-            net.append({"name": nic, "ip": ip, "up": bool(st and st.isup), "speed": st.speed if st else 0,
-                        "rx_bps": (c.bytes_recv - p.bytes_recv) / dt, "tx_bps": (c.bytes_sent - p.bytes_sent) / dt,
-                        "rx_total": c.bytes_recv, "tx_total": c.bytes_sent,
-                        "errs": c.errin + c.errout, "drops": c.dropin + c.dropout})
-        io, io_rate = psutil.disk_io_counters(), {}
-        if io and prev_io:
-            io_rate = {"read_bps": (io.read_bytes - prev_io.read_bytes) / dt,
-                       "write_bps": (io.write_bytes - prev_io.write_bytes) / dt}
-        vm, sw = psutil.virtual_memory(), psutil.swap_memory()
-        freq = psutil.cpu_freq()
-        state.update({
-            "ready": True, "ts": now, "hostname": hostname, "uptime": now - psutil.boot_time(),
-            "cpu": {"model": model, "pct": psutil.cpu_percent(), "cores": psutil.cpu_percent(percpu=True),
-                    "load": os.getloadavg(), "freq": freq.current if freq else None,
-                    "threads": psutil.cpu_count(), "physical": psutil.cpu_count(logical=False)},
-            "mem": {"total": vm.total, "used": vm.total - vm.available, "available": vm.available,
-                    "pct": vm.percent, "swap_total": sw.total, "swap_used": sw.used},
-            "gpus": gpus(), "temps": temps(), "disks": disks(), "disk_io": io_rate, "net": net,
-        })
-        prev_net, prev_io, prev_t = cur_net, io, now
+    try:
+        prev_net = psutil.net_io_counters(pernic=True)
+        prev_io = psutil.disk_io_counters()
+        prev_t = time.time()
+        psutil.cpu_percent(percpu=True)
+        model = cpu_model()
+        hostname = read(f"{HOST}/etc/hostname").strip() or os.uname().nodename
+        while True:
+            time.sleep(INTERVAL)
+            now = time.time()
+            dt = max(now - prev_t, 0.1)
+            net, cur_net = [], psutil.net_io_counters(pernic=True)
+            stats, addrs = psutil.net_if_stats(), psutil.net_if_addrs()
+            for nic, c in cur_net.items():
+                if nic.startswith(SKIP_NIC):
+                    continue
+                p = prev_net.get(nic, c)
+                ip = next((a.address for a in addrs.get(nic, []) if a.family.name == "AF_INET"), "")
+                st = stats.get(nic)
+                net.append({"name": nic, "ip": ip, "up": bool(st and st.isup), "speed": st.speed if st else 0,
+                            "rx_bps": (c.bytes_recv - p.bytes_recv) / dt, "tx_bps": (c.bytes_sent - p.bytes_sent) / dt,
+                            "rx_total": c.bytes_recv, "tx_total": c.bytes_sent,
+                            "errs": c.errin + c.errout, "drops": c.dropin + c.dropout})
+            io, io_rate = psutil.disk_io_counters(), {}
+            if io and prev_io:
+                io_rate = {"read_bps": (io.read_bytes - prev_io.read_bytes) / dt,
+                           "write_bps": (io.write_bytes - prev_io.write_bytes) / dt}
+            vm, sw = psutil.virtual_memory(), psutil.swap_memory()
+            freq = psutil.cpu_freq()
+            state.update({
+                "ready": True, "ts": now, "hostname": hostname, "uptime": now - psutil.boot_time(),
+                "cpu": {"model": model, "pct": psutil.cpu_percent(), "cores": psutil.cpu_percent(percpu=True),
+                        "load": os.getloadavg(), "freq": freq.current if freq else None,
+                        "threads": psutil.cpu_count(), "physical": psutil.cpu_count(logical=False)},
+                "mem": {"total": vm.total, "used": vm.total - vm.available, "available": vm.available,
+                        "pct": vm.percent, "swap_total": sw.total, "swap_used": sw.used},
+                "gpus": gpus(), "temps": temps(), "disks": disks(), "disk_io": io_rate, "net": net,
+            })
+            prev_net, prev_io, prev_t = cur_net, io, now
+    except Exception as e:
+        print(f"Sampler error: {e}")
+
+
+threading.Thread(target=sampler, daemon=True).start()
 
 
 @app.get("/api/stats")

@@ -91,9 +91,11 @@ server-monitor/
 ├── docker-compose.yml          # no GPU or AMD GPU
 ├── docker-compose.nvidia.yml   # NVIDIA GPU
 ├── Dockerfile
-└── app/
-    ├── main.py                 # FastAPI backend and host sampling
-    └── static/index.html       # single-file dashboard (no build step)
+├── app/
+│   ├── main.py                 # FastAPI backend and host sampling
+│   └── static/                 # dashboard files
+│       ├── index.html          # single-server status view
+│       └── dashboard.html      # multi-server aggregator dashboard
 ```
 
 ## Security

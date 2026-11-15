@@ -1,7 +1,7 @@
 # Project Guidelines
 
 ## Architecture
-- The FastAPI backend and host sampling logic are in `app/main.py`. The dashboard is a single HTML/CSS/JavaScript file at `app/static/index.html`; there is no frontend build step.
+- The FastAPI backend and host sampling logic are in `app/main.py`. It serves two views: a single-server status view (`app/static/index.html`) and a multi-server aggregator dashboard (`app/static/dashboard.html`). There is no frontend build step.
 - Keep the `/api/stats` response shape consistent with the dashboard, and handle unavailable hardware or sensor data gracefully.
 - The Compose files intentionally differ for NVIDIA GPU support. Preserve the differences and document configuration or deployment changes in `README.md`.
 

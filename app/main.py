@@ -1,4 +1,4 @@
-import os, shutil, subprocess, threading, time
+import glob, os, re, shlex, shutil, subprocess, threading, time
 import psutil
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
@@ -9,6 +9,7 @@ INTERVAL = float(os.environ.get("INTERVAL", "2"))
 REAL_FS = {"ext2", "ext3", "ext4", "xfs", "btrfs", "zfs", "vfat", "exfat", "ntfs", "ntfs3",
            "f2fs", "fuseblk", "nfs", "nfs4", "cifs"}
 SKIP_NIC = ("veth", "br-", "docker", "lo")
+DRM = os.environ.get("DRM_PATH", "/sys/class/drm")
 
 app = FastAPI()
 state = {"ready": False}
@@ -36,9 +37,9 @@ def num(v):
         return None  # nvidia-smi prints "[N/A]"
 
 
-def gpus():
+def nvidia_gpus():
     if not shutil.which("nvidia-smi"):
-        return None
+        return []
     q = "index,name,temperature.gpu,utilization.gpu,memory.used,memory.total,power.draw,power.limit,fan.speed,clocks.sm,clocks.mem"
     try:
         out = subprocess.check_output(
@@ -47,14 +48,14 @@ def gpus():
             ["nvidia-smi", "--query-compute-apps=gpu_uuid,pid,process_name,used_memory",
              "--format=csv,noheader,nounits"], capture_output=True, text=True, timeout=5).stdout
     except Exception:
-        return None
-    keys = ["index", "name", "temp", "util", "vram_used", "vram_total", "power", "power_limit", "fan", "clk_sm", "clk_mem"]
+        return []
+    keys = ["index", "name", "temp", "util", "vram_used", "vram_total", "power", "power_limit", "fan_pct", "clk_sm", "clk_mem"]
     res = []
     for line in out.strip().splitlines():
-        p = [x.strip() for x in line.split(",")]
-        g = dict(zip(keys, p))
+        g = dict(zip(keys, [x.strip() for x in line.split(",")]))
         for k in keys[2:]:
             g[k] = num(g[k])
+        g["vendor"] = "NVIDIA"
         res.append(g)
     apps = []
     for line in procs.strip().splitlines():
@@ -64,6 +65,49 @@ def gpus():
     if res:
         res[0]["procs"] = apps  # not mapped per GPU; shown once
     return res
+
+
+def pci_name(slot):
+    try:
+        out = subprocess.check_output(["lspci", "-mm", "-s", slot], text=True, timeout=3)
+        return shlex.split(out.splitlines()[0])[3]
+    except Exception:
+        return None
+
+
+def scaled(path, div, nd=1):
+    v = num(read(path).strip())
+    return None if v is None else round(v / div, nd)
+
+
+def amd_gpus():
+    """AMD (amdgpu driver) via sysfs only: no ROCm or extra devices needed."""
+    res = []
+    for dev in sorted(glob.glob(f"{DRM}/card*/device")):
+        if not re.fullmatch(r"card\d+", os.path.basename(os.path.dirname(dev))):
+            continue
+        if read(f"{dev}/vendor").strip() != "0x1002" or not os.path.exists(f"{dev}/mem_info_vram_total"):
+            continue
+        hw = (glob.glob(f"{dev}/hwmon/hwmon*") or [None])[0]
+        slot = next((l.split("=", 1)[1] for l in read(f"{dev}/uevent").splitlines()
+                     if l.startswith("PCI_SLOT_NAME=")), "")
+        h = (lambda f, d, nd=1: scaled(f"{hw}/{f}", d, nd)) if hw else (lambda *a, **k: None)
+        power = h("power1_average", 1e6) if hw and os.path.exists(f"{hw}/power1_average") else h("power1_input", 1e6)
+        res.append({
+            "vendor": "AMD", "index": re.search(r"card(\d+)", dev).group(1),
+            "name": read(f"{dev}/product_name").strip() or (pci_name(slot) if slot else None) or "AMD GPU",
+            "temp": h("temp1_input", 1000, 0), "util": scaled(f"{dev}/gpu_busy_percent", 1, 0),
+            "vram_used": scaled(f"{dev}/mem_info_vram_used", 1048576, 0),
+            "vram_total": scaled(f"{dev}/mem_info_vram_total", 1048576, 0),
+            "power": power, "power_limit": h("power1_cap", 1e6),
+            "fan_pct": None, "fan_rpm": h("fan1_input", 1, 0),
+            "clk_sm": h("freq1_input", 1e6, 0), "clk_mem": h("freq2_input", 1e6, 0),
+        })
+    return res
+
+
+def gpus():
+    return nvidia_gpus() + amd_gpus()
 
 
 def temps():

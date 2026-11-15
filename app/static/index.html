@@ -16,7 +16,9 @@ header span{color:var(--muted)}
 #dot.on{background:var(--ok)}
 main{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;padding:20px 24px}
 section{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px;min-width:0}
-section.wide{grid-column:1/-1}
+.usage-grid{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.table-scroll{overflow-x:auto}
+@media(max-width:720px){.usage-grid{grid-template-columns:1fr}}
 h2{font-size:14px;margin:0 0 12px;font-weight:600;color:var(--muted)}
 .big{font-size:34px;font-weight:650;line-height:1}
 .big small{font-size:14px;color:var(--muted);font-weight:400;margin-left:6px}
@@ -84,25 +86,27 @@ function render(s) {
   if (s.gpus && s.gpus.length) s.gpus.forEach((g, i) => {
     const vp = g.vram_total ? g.vram_used / g.vram_total * 100 : 0;
     if (i === 0) push('gpu', g.util || 0);
-    h += `<section><h2>GPU ${g.index}</h2><div class="big">${g.util ?? '–'}%<small>${esc(g.name)}</small></div>
+    h += `<section><h2>GPU ${g.index} <span class="muted">${esc(g.vendor)}</span></h2><div class="big">${g.util ?? '–'}%<small>${esc(g.name)}</small></div>
       <div class="row"><b>VRAM</b><span>${g.vram_used} / ${g.vram_total} MiB</span></div>${bar(vp)}
       <div class="row"><b>Temperature</b><span class="t ${tcls(g.temp)}">${g.temp ?? '–'} °C</span></div>
       <div class="row"><b>Power</b><span>${g.power ?? '–'} / ${g.power_limit ?? '–'} W</span></div>
-      <div class="row"><b>Fan · clocks</b><span>${g.fan ?? '–'}% · ${g.clk_sm ?? '–'} / ${g.clk_mem ?? '–'} MHz</span></div>
+      <div class="row"><b>Fan · clocks</b><span>${g.fan_pct != null ? g.fan_pct + '%' : g.fan_rpm != null ? g.fan_rpm + ' RPM' : '–'} · ${g.clk_sm ?? '–'} / ${g.clk_mem ?? '–'} MHz</span></div>
       ${i === 0 ? spark(H.gpu, 100, 'b') : ''}
       ${(g.procs || []).length ? `<table style="margin-top:10px">${g.procs.map(p => `<tr><td>${esc(p.name)} <span class="muted">${p.pid}</span></td><td class="n">${p.vram} MiB</td></tr>`).join('')}</table>` : ''}</section>`;
   });
-  else h += `<section><h2>GPU</h2><span class="muted">No NVIDIA GPU detected. Check that nvidia-container-toolkit is installed and the deploy block is in docker-compose.yml.</span></section>`;
+  ;
   const ts = [...s.temps].sort((a, b) => b.cur - a.cur);
   h += `<section><h2>Temperatures</h2>${ts.length ? `<div class="temps">${ts.map(t => `<div><span>${esc(t.label)} <em>${esc(t.chip)}</em></span><b class="t ${tcls(t.cur, t.high, t.crit)}">${t.cur.toFixed(0)} °C</b></div>`).join('')}</div>` : '<span class="muted">No sensors exposed to the container.</span>'}</section>`;
   const io = s.disk_io;
-  h += `<section class="wide"><h2>Disks${io.read_bps != null ? ` <span style="float:right">Read ${rate(io.read_bps)} · Write ${rate(io.write_bps)}</span>` : ''}</h2>
+  h += `<div class="usage-grid"><section><h2>Disks${io.read_bps != null ? ` <span style="float:right">Read ${rate(io.read_bps)} · Write ${rate(io.write_bps)}</span>` : ''}</h2>
+    <div class="table-scroll">
     <table><tr><th>Mount</th><th>Device</th><th class="n">Used</th><th class="n">Available</th><th class="n">Capacity</th><th style="width:22%">Usage</th></tr>
-    ${s.disks.map(d => `<tr><td>${esc(d.mount)}</td><td class="muted">${esc(d.dev)} · ${d.fs}</td><td class="n">${bytes(d.used)}</td><td class="n">${bytes(d.free)}</td><td class="n">${bytes(d.total)}</td><td>${bar(d.pct)}<span class="muted">${d.pct}%</span></td></tr>`).join('')}</table></section>
-  <section class="wide"><h2>Network <span style="float:right">↓ ${rate(tot.rx)} · ↑ ${rate(tot.tx)}</span></h2>
+    ${s.disks.map(d => `<tr><td>${esc(d.mount)}</td><td class="muted">${esc(d.dev)} · ${d.fs}</td><td class="n">${bytes(d.used)}</td><td class="n">${bytes(d.free)}</td><td class="n">${bytes(d.total)}</td><td>${bar(d.pct)}<span class="muted">${d.pct}%</span></td></tr>`).join('')}</table></div></section>
+  <section><h2>Network <span style="float:right">↓ ${rate(tot.rx)} · ↑ ${rate(tot.tx)}</span></h2>
+    <div class="table-scroll">
     <table><tr><th>Interface</th><th>Address</th><th>State</th><th class="n">Down</th><th class="n">Up</th><th class="n">Total in / out</th><th class="n">Errors / drops</th></tr>
     ${s.net.map(n => `<tr><td>${esc(n.name)}</td><td>${esc(n.ip)}</td><td class="t ${n.up ? '' : 'crit'}">${n.up ? 'Up' + (n.speed ? ' ' + n.speed + ' Mbps' : '') : 'Down'}</td><td class="n">${rate(n.rx_bps)}</td><td class="n">${rate(n.tx_bps)}</td><td class="n">${bytes(n.rx_total)} / ${bytes(n.tx_total)}</td><td class="n">${n.errs} / ${n.drops}</td></tr>`).join('')}</table>
-    ${spark(H.rx, 0)}${spark(H.tx, 0, 'b')}</section>`;
+    </div>${spark(H.rx, 0)}${spark(H.tx, 0, 'b')}</section></div>`;
   $('#app').innerHTML = h;
 }
 async function tick() {

@@ -1,25 +1,17 @@
+# Default file: works on servers with NO GPU or with an AMD GPU.
+# NVIDIA server? Use docker-compose.nvidia.yml instead (not in addition).
 services:
   monitor:
     build: .
     container_name: server-monitor
     restart: unless-stopped
-    network_mode: host        # host NICs + host network counters (UI on http://<host>:${MONITOR_PORT:-8787})
+    network_mode: host        # host NICs + counters (UI on http://<host>:${MONITOR_PORT:-8787})
     pid: host                 # host-wide process/CPU view
-    cap_add: [SYS_PTRACE]     # lets us read the host's /proc/1/mounts for real disk list
+    cap_add: [SYS_PTRACE]     # lets us read the host's /proc/1/mounts for the real disk list
     environment:
       - PORT=${MONITOR_PORT:-8787}
       - INTERVAL=2
       - HOST_ROOT=/hostfs
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=utility   # exposes nvidia-smi only
     volumes:
       - /:/hostfs:ro,rslave   # host filesystems, read-only, submounts included
-    # NVIDIA GPU access (needs nvidia-container-toolkit on the host).
-    # No GPU on this server? Delete the whole deploy block.
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+    # AMD GPUs are read from /sys (amdgpu driver), which the container already sees.

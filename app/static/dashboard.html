@@ -355,7 +355,22 @@
             }
         }
 
-        async function renderDashboard() {
+        function formatUptime(seconds) {
+    const months = Math.floor(seconds / 2592000);
+    const days = Math.floor((seconds % 2592000) / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+
+    const parts = [];
+    if (months > 0) parts.push(`${months} month${months !== 1 ? 's' : ''}`);
+    if (days > 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
+    if (hours > 0) parts.push(`${hours} hour${hours !== 1 ? 's' : ''}`);
+    if (minutes > 0) parts.push(`${minutes} minute${minutes !== 1 ? 's' : ''}`);
+
+    return parts.length > 0 ? parts.join(', ') : '0 minutes';
+}
+
+async function renderDashboard() {
             initDefaults();
             grid.innerHTML = '';
             for (const srv of servers) {
@@ -396,7 +411,7 @@
                             <div class="stat-row"><span class="stat-label">CPU</span><span>${cpu.toFixed(0)}%</span></div>
                             <div class="stat-row"><span class="stat-label">Memory</span><span>${mem.toFixed(0)}%</span></div>
                             <div class="stat-row"><span class="stat-label">GPUs</span><span>${gpu}</span></div>
-                            <div class="stat-row"><span class="stat-label">Uptime</span><span>${Math.round(data.uptime)}s</span></div>
+                             <div class="stat-row"><span class="stat-label">Uptime</span><span>${formatUptime(data.uptime)}</span></div>
                         `;
                         dot.classList.add('on');
                         statusTxt.textContent = 'Online';

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aggregator Dashboard</title>
-<style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     :root {
         --bg-color: #0f172a;
         --card-bg: #1e293b;
@@ -147,10 +147,27 @@
         color: var(--secondary-text);
     }
 
-    .card-footer {
-        margin-top: 20px;
-        padding-top: 16px;
-        border-top: 1px solid var(--border-color);
+    .chart-container {
+        margin-top: 16px;
+        height: 120px;
+        width: 100%;
+    }
+    .chart-legend {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 8px;
+        font-size: 0.75rem;
+    }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .legend-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
     }
 
     .detail-link {
@@ -275,6 +292,8 @@
         const serverForm = document.getElementById('serverForm');
 
         let servers = JSON.parse(localStorage.getItem('monitored_servers')) || [];
+        const charts = {};
+        const histories = {};
 
         // Theme Management
         function updateThemeUI(theme) {
@@ -370,9 +389,12 @@
     return parts.length > 0 ? parts.join(', ') : '0 minutes';
 }
 
-async function renderDashboard() {
+        async function renderDashboard() {
+            charts = {};
+            histories = {};
             initDefaults();
             grid.innerHTML = '';
+
             for (const srv of servers) {
                 const card = document.createElement('div');
                 card.className = 'card';
@@ -388,8 +410,16 @@ async function renderDashboard() {
                             </div>
                             <button class="remove-btn" onclick="removeServer('${srv.id}')">×</button>
                         </div>
-                    <div class="card-body">
+                     <div class="card-body">
                         <div id="stats-${srv.id}">Loading...</div>
+                        <div class="chart-container">
+                            <canvas id="chart-${srv.id}"></canvas>
+                        </div>
+                        <div class="chart-legend">
+                            <div class="legend-item"><span class="legend-dot" style="background: #ef4444;"></span>CPU</div>
+                            <div class="legend-item"><span class="legend-dot" style="background: #3b82f6;"></span>Memory</div>
+                            <div class="legend-item"><span class="legend-dot" style="background: #10b981;"></span>GPU</div>
+                        </div>
                     </div>
                     <div class="card-footer">
                         <a href="http://${srv.ip}:${srv.port}" target="_blank" class="detail-link">Detail View</a>
@@ -400,7 +430,30 @@ async function renderDashboard() {
                 const statsDiv = card.querySelector(`#stats-${srv.id}`);
                 const dot = card.querySelector(`#dot-${srv.id}`);
                 const statusTxt = card.querySelector(`#status-${srv.id}`);
-                
+
+                const ctx = document.getElementById(`chart-${srv.id}`).getContext('2d');
+                histories[srv.id] = [];
+                charts[srv.id] = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: Array(30).fill(''),
+                        datasets: [
+                            { label: 'CPU', data: [], borderColor: '#ef4444', tension: 0.4, pointRadius: 0 },
+                            { label: 'Memory', data: [], borderColor: '#3b82f6', tension: 0.4, pointRadius: 0 },
+                            { label: 'GPU', data: [], borderColor: '#10b981', tension: 0.4, pointRadius: 0 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { min: 0, max: 100, ticks: { display: false }, grid: { display: false } },
+                            x: { display: false }
+                        }
+                    }
+                });
+
                 const poll = async () => {
                     const data = await fetchStats(srv.ip, srv.port);
                     if (data && data.ready) {
@@ -411,15 +464,31 @@ async function renderDashboard() {
                             <div class="stat-row"><span class="stat-label">CPU</span><span>${cpu.toFixed(0)}%</span></div>
                             <div class="stat-row"><span class="stat-label">Memory</span><span>${mem.toFixed(0)}%</span></div>
                             <div class="stat-row"><span class="stat-label">GPUs</span><span>${gpu}</span></div>
-                             <div class="stat-row"><span class="stat-label">Uptime</span><span>${formatUptime(data.uptime)}</span></div>
+                            <div class="stat-row"><span class="stat-label">Uptime</span><span>${formatUptime(data.uptime)}</span></div>
                         `;
                         dot.classList.add('on');
                         statusTxt.textContent = 'Online';
+
+                        const history = histories[srv.id];
+                        history.push({ cpu, mem, gpu });
+                        if (history.length > 30) history.shift();
+
+                        charts[srv.id].data.datasets[0].data = history.map(h => h.cpu);
+                        charts[srv.id].data.datasets[1].data = history.map(h => h.mem);
+                        charts[srv.id].data.datasets[2].data = history.map(h => h.gpu);
+                        charts[srv.id].update('none');
                     } else {
                         statsDiv.innerHTML = `<div class="stat-row"><span class="stat-label">Error</span><span>Offline</span></div>`;
                         dot.classList.remove('on');
                         statusTxt.textContent = 'Offline';
                     }
+                };
+
+                poll();
+                setInterval(poll, 2000);
+            }
+        }
+
                 };
 
                 poll();

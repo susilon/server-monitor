@@ -48,8 +48,9 @@ th{color:var(--muted)}td.n,th.n{text-align:right;font-variant-numeric:tabular-nu
 <body>
 <header>
   <h1 id="host">Server status</h1>
-  <span><i id="dot"></i><b id="conn">Connecting</b></span>
+  <span><i id="dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--crit);margin-right:6px"></i><b id="conn">Connecting</b></span>
   <span id="up"></span><span id="load"></span>
+  <a href="/dashboard" style="margin-left:20px; color:var(--ok); text-decoration:none; border:1px solid var(--ok); padding:4px 8px; border-radius:4px; font-size:12px;">Aggregator</a>
 </header>
 <main id="app"></main>
 <script>

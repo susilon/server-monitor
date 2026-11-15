@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aggregator Dashboard</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --accent-color: #00e676;
+            --border-color: #333;
+        }
+
+        [data-theme="light"] {
+            --bg-color: #f0f0f0;
+            --card-bg: #ffffff;
+            --text-color: #202020;
+            --accent-color: #00796b;
+            --border-color: #ccc;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 30px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        input, select, button {
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+            color: var(--text-color);
+        }
+
+        button {
+            cursor: pointer;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .grid-container {
+            display: grid;
+            gap: 20px;
+            grid-template-columns: repeat(var(--cards-per-row, 1), minmax(300px, 1fr));
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .card h3 {
+            margin-top: 0;
+            color: var(--accent-color);
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 0.9em;
+        }
+
+        .detail-btn {
+            margin-top: 15px;
+            display: inline-block;
+            padding: 10px;
+            text-align: center;
+            width: 100%;
+            background-color: var(--border-color);
+            color: var(--text-color);
+            text-decoration: none;
+            border-radius: 4px;
+        }
+
+        .detail-btn:hover {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        .status-dot {
+            height: 10px;
+            width: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .online { background-color: #4caf50; }
+        .offline { background-color: #f44336; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Aggregator Dashboard</h1>
+        <div class="controls">
+            <select id="layoutSelector">
+                <option value="1">1 card per row</option>
+                <option value="2">2 cards per row</option>
+                <option value="3">3 cards per row</option>
+                <option value="4">4 cards per row</option>
+                <option value="5">5 cards per row</option>
+                <option value="6">6 cards per row</option>
+            </select>
+            <button id="themeToggle">Toggle Theme</button>
+            <button id="addServerBtn">Add Server</button>
+            <form id="serverForm" style="display:none; gap: 5px;">
+                <input type="text" id="srvName" placeholder="Name" required>
+                <input type="text" id="srvIp" placeholder="IP" required>
+                <input type="number" id="srvPort" placeholder="Port" required>
+                <button type="submit">Add</button>
+            </form>
+        </div>
+    </header>
+
+    <div id="grid" class="grid-container" style="--cards-per-row: 1;"></div>
+
+    <script>
+        const grid = document.getElementById('grid');
+        const layoutSelector = document.getElementById('layoutSelector');
+        const themeToggle = document.getElementById('themeToggle');
+        const addServerBtn = document.getElementById('addServerBtn');
+        const serverForm = document.getElementById('serverForm');
+
+        let servers = JSON.parse(localStorage.getItem('monitored_servers')) || [];
+
+        // Theme Management
+        themeToggle.addEventListener('click', () => {
+            const current = document.body.getAttribute('data-theme');
+            const next = current === 'light' ? 'dark' : 'light';
+            document.body.setAttribute('data-theme', next);
+            localStorage.setItem('aggregator_theme', next);
+        });
+
+        const savedTheme = localStorage.getItem('aggregator_theme') || 'dark';
+        document.body.setAttribute('data-theme', savedTheme);
+
+        // Layout Management
+        layoutSelector.addEventListener('change', (e) => {
+            grid.style.setProperty('--cards-per-row', e.target.value);
+        });
+
+        // Server Management
+        addServerBtn.addEventListener('click', () => {
+            serverForm.style.display = serverForm.style.display === 'none' ? 'flex' : 'none';
+            addServerBtn.textContent = serverForm.style.display === 'none' ? 'Add Server' : 'Cancel';
+        });
+
+        serverForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newSrv = {
+                id: Date.now().toString(),
+                name: document.getElementById('srvName').value,
+                ip: document.getElementById('srvIp').value,
+                port: document.getElementById('srvPort').value
+            };
+            servers.push(newSrv);
+            localStorage.setItem('monitored_servers', JSON.stringify(servers));
+            serverForm.reset();
+            serverForm.style.display = 'none';
+            addServerBtn.textContent = 'Add Server';
+            renderDashboard();
+        });
+
+        function removeServer(id) {
+            servers = servers.filter(s => s.id !== id);
+            localStorage.setItem('monitored_servers', JSON.stringify(servers));
+            renderDashboard();
+        }
+
+        async function fetchStats(ip, port) {
+            try {
+                const response = await fetch(`http://${ip}:${port}/api/stats`);
+                return await response.json();
+            } catch (e) {
+                return null;
+            }
+        }
+
+        async function renderDashboard() {
+            grid.innerHTML = '';
+            for (const srv of servers) {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between;">
+                        <h3>${srv.name}</h3>
+                        <button onclick="removeServer('${srv.id}')" style="padding:2px 5px; background:red;">X</button>
+                    </div>
+                    <div id="stats-${srv.id}">Loading...</div>
+                    <a href="http://${srv.ip}:${srv.port}" target="_blank" class="detail-btn">Detail View</a>
+                `;
+                grid.appendChild(card);
+
+                const statsDiv = card.querySelector(`#stats-${srv.id}`);
+                
+                // Poll loop
+                const poll = async () => {
+                    const data = await fetchStats(srv.ip, srv.port);
+                    if (data && data.ready) {
+                        const cpu = data.cpu?.pct || 0;
+                        const mem = data.mem?.pct || 0;
+                        const gpu = data.gpus?.length || 0;
+                        statsDiv.innerHTML = `
+                            <div class="stat-row"><span>CPU:</span> <span>${cpu}%</span></div>
+                            <div class="stat-row"><span>Mem:</span> <span>${mem}%</span></div>
+                            <div class="stat-row"><span>GPUs:</span> <span>${gpu}</span></div>
+                            <div class="stat-row"><span>Uptime:</span> <span>${Math.round(data.uptime)}s</span></div>
+                            <div class="stat-row"><span>Status:</span> <span class="status-dot online"></span></div>
+                        `;
+                    } else {
+                        statsDiv.innerHTML = `<div class="stat-row"><span>Status:</span> <span class="status-dot offline"></span></div>
+                                              <div class="stat-row"><span>Error:</span> <span>Offline</span></div>`;
+                    }
+                };
+
+                poll();
+                setInterval(poll, 2000);
+            }
+        }
+
+        renderDashboard();
+    </script>
+</body>
+</html>

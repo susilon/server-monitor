@@ -191,8 +191,11 @@ def stats():
     return state
 
 
-app.mount("/static", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "static")), name="static")
+@app.route("/dashboard")
+def dashboard():
+    return FileResponse(os.path.join(os.path.dirname(__file__), "static", "dashboard.html"))
 
+app.mount("/static", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "static")), name="static")
 
 @app.get("/")
 def index():

@@ -459,18 +459,24 @@
                     if (data && data.ready) {
                         const cpu = data.cpu?.pct || 0;
                         const mem = data.mem?.pct || 0;
-                        const gpu = data.gpus?.length || 0;
+                        
+                        // Calculate average GPU utilization across all GPUs
+                        const gpus = data.gpus || [];
+                        const avgGpuUtil = gpus.length > 0 
+                            ? Math.round(gpus.reduce((sum, gpu) => sum + (gpu.util || 0), 0) / gpus.length)
+                            : 0;
+                        
                         statsDiv.innerHTML = `
                             <div class="stat-row"><span class="stat-label">CPU</span><span>${cpu.toFixed(0)}%</span></div>
                             <div class="stat-row"><span class="stat-label">Memory</span><span>${mem.toFixed(0)}%</span></div>
-                            <div class="stat-row"><span class="stat-label">GPUs</span><span>${gpu}</span></div>
+                            <div class="stat-row"><span class="stat-label">GPU Utilization</span><span>${avgGpuUtil}%</span></div>
                             <div class="stat-row"><span class="stat-label">Uptime</span><span>${formatUptime(data.uptime)}</span></div>
                         `;
                         dot.classList.add('on');
                         statusTxt.textContent = 'Online';
 
                         const history = histories[srv.id];
-                        history.push({ cpu, mem, gpu });
+                        history.push({ cpu, mem, gpu: avgGpuUtil });
                         if (history.length > 30) history.shift();
 
                         charts[srv.id].data.datasets[0].data = history.map(h => h.cpu);

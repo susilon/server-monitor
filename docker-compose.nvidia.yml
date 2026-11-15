@@ -12,6 +12,7 @@ services:
       - PORT=${MONITOR_PORT:-8787}
       - INTERVAL=2
       - HOST_ROOT=/hostfs
+      - DASHBOARD_ORIGIN=${DASHBOARD_ORIGIN:-*}
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=utility   # exposes nvidia-smi only
     volumes:

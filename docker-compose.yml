@@ -12,6 +12,7 @@ services:
       - PORT=${MONITOR_PORT:-8787}
       - INTERVAL=2
       - HOST_ROOT=/hostfs
+      - DASHBOARD_ORIGIN=${DASHBOARD_ORIGIN:-*}
     volumes:
       - /:/hostfs:ro,rslave   # host filesystems, read-only, submounts included
     # AMD GPUs are read from /sys (amdgpu driver), which the container already sees.

@@ -4,19 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aggregator Dashboard</title>
-    <style>
-        :root {
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
-            --text-color: #f8fafc;
-            --accent-color: #38bdf8;
-            --border-color: #334155;
-            --secondary-text: #94a3b8;
-            --success: #22c55e;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -1px rgb(0 0 0 / 0.06);
-        }
+<style>
+    .card-ip {
+        font-size: 0.75rem;
+        color: var(--secondary-text);
+        margin-top: -4px;
+    }
+</style>
 
         [data-theme="light"] {
             --bg-color: #f1f5f9;
@@ -340,16 +334,17 @@
                 const card = document.createElement('div');
                 card.className = 'card';
                 card.innerHTML = `
-                    <div class="card-header">
-                        <div>
-                            <h3>${srv.name}</h3>
-                            <div class="status-indicator">
-                                <span class="dot" id="dot-${srv.id}"></span>
-                                <span id="status-${srv.id}">Connecting...</span>
+                        <div class="card-header">
+                            <div>
+                                <h3>${srv.name}</h3>
+                                <div class="card-ip">${srv.ip}</div>
+                                <div class="status-indicator">
+                                    <span class="dot" id="dot-${srv.id}"></span>
+                                    <span id="status-${srv.id}">Connecting...</span>
+                                </div>
                             </div>
+                            <button class="remove-btn" onclick="removeServer('${srv.id}')">×</button>
                         </div>
-                        <button class="remove-btn" onclick="removeServer('${srv.id}')">×</button>
-                    </div>
                     <div class="card-body">
                         <div id="stats-${srv.id}">Loading...</div>
                     </div>

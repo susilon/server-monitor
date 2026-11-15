@@ -61,7 +61,7 @@ def nvidia_gpus():
     for line in procs.strip().splitlines():
         p = [x.strip() for x in line.split(",")]
         if len(p) == 4:
-            apps.append({"pid": p[1], "name": os.path.basename(p[2]), "vram": num(p[3])})
+            apps.append({"pid": p[1], "name": p[2].split()[0], "vram": num(p[3])})
     if res:
         res[0]["procs"] = apps  # not mapped per GPU; shown once
     return res

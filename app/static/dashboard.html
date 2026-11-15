@@ -455,36 +455,43 @@
                 });
 
                 const poll = async () => {
-                    const data = await fetchStats(srv.ip, srv.port);
-                    if (data && data.ready) {
-                        const cpu = data.cpu?.pct || 0;
-                        const mem = data.mem?.pct || 0;
-                        
-                        // Calculate average GPU utilization across all GPUs
-                        const gpus = data.gpus || [];
-                        const avgGpuUtil = gpus.length > 0 
-                            ? Math.round(gpus.reduce((sum, gpu) => sum + (gpu.util || 0), 0) / gpus.length)
-                            : 0;
-                        
-                        statsDiv.innerHTML = `
-                            <div class="stat-row"><span class="stat-label">CPU</span><span>${cpu.toFixed(0)}%</span></div>
-                            <div class="stat-row"><span class="stat-label">Memory</span><span>${mem.toFixed(0)}%</span></div>
-                            <div class="stat-row"><span class="stat-label">GPU Utilization</span><span>${avgGpuUtil}%</span></div>
-                            <div class="stat-row"><span class="stat-label">Uptime</span><span>${formatUptime(data.uptime)}</span></div>
-                        `;
-                        dot.classList.add('on');
-                        statusTxt.textContent = 'Online';
+                    try {
+                        const data = await fetchStats(srv.ip, srv.port);
+                        if (data && (data.ready || data.cpu || data.mem)) {
+                            const cpu = data.cpu?.pct || 0;
+                            const mem = data.mem?.pct || 0;
+                            
+                            // Calculate average GPU utilization across all GPUs
+                            const gpus = data.gpus || [];
+                            const avgGpuUtil = gpus.length > 0 
+                                ? Math.round(gpus.reduce((sum, gpu) => sum + (gpu.util || 0), 0) / gpus.length)
+                                : 0;
+                            
+                            statsDiv.innerHTML = `
+                                <div class="stat-row"><span class="stat-label">CPU</span><span>${cpu.toFixed(0)}%</span></div>
+                                <div class="stat-row"><span class="stat-label">Memory</span><span>${mem.toFixed(0)}%</span></div>
+                                <div class="stat-row"><span class="stat-label">GPU Utilization</span><span>${avgGpuUtil}%</span></div>
+                                <div class="stat-row"><span class="stat-label">Uptime</span><span>${formatUptime(data.uptime)}</span></div>
+                            `;
+                            dot.classList.add('on');
+                            statusTxt.textContent = 'Online';
 
-                        const history = histories[srv.id];
-                        history.push({ cpu, mem, gpu: avgGpuUtil });
-                        if (history.length > 30) history.shift();
+                            const history = histories[srv.id];
+                            history.push({ cpu, mem, gpu: avgGpuUtil });
+                            if (history.length > 30) history.shift();
 
-                        charts[srv.id].data.datasets[0].data = history.map(h => h.cpu);
-                        charts[srv.id].data.datasets[1].data = history.map(h => h.mem);
-                        charts[srv.id].data.datasets[2].data = history.map(h => h.gpu);
-                        charts[srv.id].update('none');
-                    } else {
-                        statsDiv.innerHTML = `<div class="stat-row"><span class="stat-label">Error</span><span>Offline</span></div>`;
+                            charts[srv.id].data.datasets[0].data = history.map(h => h.cpu);
+                            charts[srv.id].data.datasets[1].data = history.map(h => h.mem);
+                            charts[srv.id].data.datasets[2].data = history.map(h => h.gpu);
+                            charts[srv.id].update('none');
+                        } else {
+                            statsDiv.innerHTML = `<div class="stat-row"><span class="stat-label">Error</span><span>Offline</span></div>`;
+                            dot.classList.remove('on');
+                            statusTxt.textContent = 'Offline';
+                        }
+                    } catch (err) {
+                        console.error('Poll error:', err);
+                        statsDiv.innerHTML = `<div class="stat-row"><span class="stat-label">Error</span><span>Disconnected: ${err.message}</span></div>`;
                         dot.classList.remove('on');
                         statusTxt.textContent = 'Offline';
                     }

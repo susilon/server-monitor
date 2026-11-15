@@ -196,22 +196,8 @@ def sampler():
 
 @app.get("/api/stats")
 def stats():
-    # Flatten GPU data for dashboard compatibility
-    gpus_data = []
-    for gpu in gpus():
-        gpus_data.append({
-            "index": gpu.get("index", 0),
-            "name": gpu.get("name", ""),
-            "temp": gpu.get("temp"),
-            "util": gpu.get("util", 0) or 0,  # utilization percentage
-            "vram_used": gpu.get("vram_used"),
-            "vram_total": gpu.get("vram_total"),
-            "power": gpu.get("power"),
-            "power_limit": gpu.get("power_limit"),
-            "fan_pct": gpu.get("fan_pct"),
-            "vendor": gpu.get("vendor", ""),
-        })
-    return {"ready": state["ready"], **state, "gpus": gpus_data}
+    # Return current state directly - sampler already sets ready=True and all fields
+    return state
 
 
 @app.get("/dashboard")

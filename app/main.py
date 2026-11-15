@@ -191,7 +191,7 @@ def stats():
     return state
 
 
-@app.route("/dashboard")
+@app.get("/dashboard")
 def dashboard():
     return FileResponse(os.path.join(os.path.dirname(__file__), "static", "dashboard.html"))
 

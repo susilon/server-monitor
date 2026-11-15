@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Server status</title>
+<style>
+:root{--bg:#0e1319;--panel:#161d26;--line:#243040;--text:#d9e2ec;--muted:#7f90a3;--ok:#4cc3d9;--warn:#f2b84b;--crit:#ef6b5f;color-scheme:dark}
+@media (prefers-color-scheme:light){:root{--bg:#eef2f6;--panel:#fff;--line:#d5dde6;--text:#17212b;--muted:#5d6e80;--ok:#0e8aa3;--warn:#b7791f;--crit:#c53030;color-scheme:light}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:6px 28px;align-items:baseline;padding:18px 24px;border-bottom:1px solid var(--line)}
+h1{font-size:20px;margin:0;font-weight:650}
+header span{color:var(--muted)}
+#dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--crit);margin-right:6px}
+#dot.on{background:var(--ok)}
+main{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;padding:20px 24px}
+section{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px;min-width:0}
+section.wide{grid-column:1/-1}
+h2{font-size:14px;margin:0 0 12px;font-weight:600;color:var(--muted)}
+.big{font-size:34px;font-weight:650;line-height:1}
+.big small{font-size:14px;color:var(--muted);font-weight:400;margin-left:6px}
+.row{display:flex;justify-content:space-between;gap:12px;margin:8px 0 4px}
+.row b{font-weight:500}.row span{color:var(--muted);text-align:right}
+.bar{height:7px;background:var(--line);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ok);transition:width .4s}
+.bar i.warn,.t.warn{background:var(--warn);color:var(--warn)}
+.bar i.crit,.t.crit{background:var(--crit);color:var(--crit)}
+svg.sp{width:100%;height:44px;margin-top:10px;display:block}
+svg.sp polyline{fill:none;stroke:var(--ok);stroke-width:1.6;vector-effect:non-scaling-stroke}
+svg.sp polyline.b{stroke:var(--warn)}
+.cores{display:grid;grid-template-columns:repeat(auto-fill,minmax(26px,1fr));gap:4px;margin-top:12px}
+.core{height:34px;background:var(--line);border-radius:3px;position:relative;overflow:hidden}
+.core i{position:absolute;bottom:0;left:0;right:0;background:var(--ok)}
+.core i.warn{background:var(--warn)}.core i.crit{background:var(--crit)}
+table{width:100%;border-collapse:collapse}
+td,th{padding:5px 8px 5px 0;text-align:left;font-weight:400;border-bottom:1px solid var(--line)}
+th{color:var(--muted)}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.t{background:none!important}
+.temps{columns:2 300px;column-gap:28px}
+.temps div{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px solid var(--line);break-inside:avoid}
+.temps em{font-style:normal;color:var(--muted)}
+.muted{color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="host">Server status</h1>
+  <span><i id="dot"></i><b id="conn">Connecting</b></span>
+  <span id="up"></span><span id="load"></span>
+</header>
+<main id="app"></main>
+<script>
+const $ = s => document.querySelector(s), H = {cpu:[],mem:[],gpu:[],rx:[],tx:[]}, N = 60;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const lvl = p => p >= 90 ? 'crit' : p >= 70 ? 'warn' : '';
+const bytes = (n, d = 1) => { if (n == null) return '–'; const u = ['B','KB','MB','GB','TB','PB']; let i = 0; while (n >= 1024 && i < 5) { n /= 1024; i++ } return n.toFixed(i ? d : 0) + ' ' + u[i] };
+const rate = n => bytes(n) + '/s';
+const bar = p => `<div class="bar"><i class="${lvl(p)}" style="width:${Math.min(p, 100)}%"></i></div>`;
+function push(k, v) { H[k].push(v); if (H[k].length > N) H[k].shift() }
+function spark(arr, max, cls = '') {
+  const m = max || Math.max(1, ...arr), pts = arr.map((v, i) => `${(i / (N - 1) * 120).toFixed(1)},${(30 - Math.min(v / m, 1) * 28 - 1).toFixed(1)}`).join(' ');
+  return `<svg class="sp" viewBox="0 0 120 30" preserveAspectRatio="none"><polyline class="${cls}" points="${pts}"/></svg>`;
+}
+function dur(s) { const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60); return `${d ? d + 'd ' : ''}${h}h ${m}m` }
+const tcls = (t, hi, cr) => cr && t >= cr ? 'crit' : hi && t >= hi ? 'warn' : t >= 85 ? 'crit' : t >= 70 ? 'warn' : '';
+
+function render(s) {
+  $('#host').textContent = s.hostname;
+  $('#up').textContent = 'Up ' + dur(s.uptime);
+  $('#load').textContent = 'Load ' + s.cpu.load.map(x => x.toFixed(2)).join(' / ');
+  const c = s.cpu, m = s.mem;
+  push('cpu', c.pct); push('mem', m.pct);
+  const tot = s.net.reduce((a, n) => (a.rx += n.rx_bps, a.tx += n.tx_bps, a), {rx: 0, tx: 0});
+  push('rx', tot.rx); push('tx', tot.tx);
+  let h = `<section><h2>CPU</h2><div class="big">${c.pct.toFixed(0)}%<small>${esc(c.model)}</small></div>
+    <div class="row"><b>${c.physical} cores / ${c.threads} threads</b><span>${c.freq ? (c.freq / 1000).toFixed(2) + ' GHz' : ''}</span></div>
+    ${spark(H.cpu, 100)}
+    <div class="cores">${c.cores.map(p => `<div class="core" title="${p}%"><i class="${lvl(p)}" style="height:${p}%"></i></div>`).join('')}</div></section>
+  <section><h2>Memory</h2><div class="big">${m.pct.toFixed(0)}%<small>${bytes(m.used)} of ${bytes(m.total)}</small></div>
+    <div class="row"><b>Available</b><span>${bytes(m.available)}</span></div>${bar(m.pct)}
+    <div class="row"><b>Swap</b><span>${bytes(m.swap_used)} of ${bytes(m.swap_total)}</span></div>${m.swap_total ? bar(m.swap_used / m.swap_total * 100) : ''}
+    ${spark(H.mem, 100)}</section>`;
+  if (s.gpus && s.gpus.length) s.gpus.forEach((g, i) => {
+    const vp = g.vram_total ? g.vram_used / g.vram_total * 100 : 0;
+    if (i === 0) push('gpu', g.util || 0);
+    h += `<section><h2>GPU ${g.index}</h2><div class="big">${g.util ?? '–'}%<small>${esc(g.name)}</small></div>
+      <div class="row"><b>VRAM</b><span>${g.vram_used} / ${g.vram_total} MiB</span></div>${bar(vp)}
+      <div class="row"><b>Temperature</b><span class="t ${tcls(g.temp)}">${g.temp ?? '–'} °C</span></div>
+      <div class="row"><b>Power</b><span>${g.power ?? '–'} / ${g.power_limit ?? '–'} W</span></div>
+      <div class="row"><b>Fan · clocks</b><span>${g.fan ?? '–'}% · ${g.clk_sm ?? '–'} / ${g.clk_mem ?? '–'} MHz</span></div>
+      ${i === 0 ? spark(H.gpu, 100, 'b') : ''}
+      ${(g.procs || []).length ? `<table style="margin-top:10px">${g.procs.map(p => `<tr><td>${esc(p.name)} <span class="muted">${p.pid}</span></td><td class="n">${p.vram} MiB</td></tr>`).join('')}</table>` : ''}</section>`;
+  });
+  else h += `<section><h2>GPU</h2><span class="muted">No NVIDIA GPU detected. Check that nvidia-container-toolkit is installed and the deploy block is in docker-compose.yml.</span></section>`;
+  const ts = [...s.temps].sort((a, b) => b.cur - a.cur);
+  h += `<section><h2>Temperatures</h2>${ts.length ? `<div class="temps">${ts.map(t => `<div><span>${esc(t.label)} <em>${esc(t.chip)}</em></span><b class="t ${tcls(t.cur, t.high, t.crit)}">${t.cur.toFixed(0)} °C</b></div>`).join('')}</div>` : '<span class="muted">No sensors exposed to the container.</span>'}</section>`;
+  const io = s.disk_io;
+  h += `<section class="wide"><h2>Disks${io.read_bps != null ? ` <span style="float:right">Read ${rate(io.read_bps)} · Write ${rate(io.write_bps)}</span>` : ''}</h2>
+    <table><tr><th>Mount</th><th>Device</th><th class="n">Used</th><th class="n">Available</th><th class="n">Capacity</th><th style="width:22%">Usage</th></tr>
+    ${s.disks.map(d => `<tr><td>${esc(d.mount)}</td><td class="muted">${esc(d.dev)} · ${d.fs}</td><td class="n">${bytes(d.used)}</td><td class="n">${bytes(d.free)}</td><td class="n">${bytes(d.total)}</td><td>${bar(d.pct)}<span class="muted">${d.pct}%</span></td></tr>`).join('')}</table></section>
+  <section class="wide"><h2>Network <span style="float:right">↓ ${rate(tot.rx)} · ↑ ${rate(tot.tx)}</span></h2>
+    <table><tr><th>Interface</th><th>Address</th><th>State</th><th class="n">Down</th><th class="n">Up</th><th class="n">Total in / out</th><th class="n">Errors / drops</th></tr>
+    ${s.net.map(n => `<tr><td>${esc(n.name)}</td><td>${esc(n.ip)}</td><td class="t ${n.up ? '' : 'crit'}">${n.up ? 'Up' + (n.speed ? ' ' + n.speed + ' Mbps' : '') : 'Down'}</td><td class="n">${rate(n.rx_bps)}</td><td class="n">${rate(n.tx_bps)}</td><td class="n">${bytes(n.rx_total)} / ${bytes(n.tx_total)}</td><td class="n">${n.errs} / ${n.drops}</td></tr>`).join('')}</table>
+    ${spark(H.rx, 0)}${spark(H.tx, 0, 'b')}</section>`;
+  $('#app').innerHTML = h;
+}
+async function tick() {
+  try {
+    const s = await (await fetch('/api/stats', {cache: 'no-store'})).json();
+    if (!s.ready) throw 0;
+    render(s); $('#dot').className = 'on'; $('#conn').textContent = 'Live';
+  } catch { $('#dot').className = ''; $('#conn').textContent = 'Disconnected' }
+}
+tick(); setInterval(tick, 2000);
+</script>
+</body>
+</html>

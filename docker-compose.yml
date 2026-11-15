@@ -1,0 +1,25 @@
+services:
+  monitor:
+    build: .
+    container_name: server-monitor
+    restart: unless-stopped
+    network_mode: host        # host NICs + host network counters (UI on http://<host>:8080)
+    pid: host                 # host-wide process/CPU view
+    cap_add: [SYS_PTRACE]     # lets us read the host's /proc/1/mounts for real disk list
+    environment:
+      - PORT=8080
+      - INTERVAL=2
+      - HOST_ROOT=/hostfs
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=utility   # exposes nvidia-smi only
+    volumes:
+      - /:/hostfs:ro,rslave   # host filesystems, read-only, submounts included
+    # NVIDIA GPU access (needs nvidia-container-toolkit on the host).
+    # No GPU on this server? Delete the whole deploy block.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

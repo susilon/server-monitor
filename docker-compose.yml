@@ -3,11 +3,11 @@ services:
     build: .
     container_name: server-monitor
     restart: unless-stopped
-    network_mode: host        # host NICs + host network counters (UI on http://<host>:8080)
+    network_mode: host        # host NICs + host network counters (UI on http://<host>:${MONITOR_PORT:-8787})
     pid: host                 # host-wide process/CPU view
     cap_add: [SYS_PTRACE]     # lets us read the host's /proc/1/mounts for real disk list
     environment:
-      - PORT=8080
+      - PORT=${MONITOR_PORT:-8787}
       - INTERVAL=2
       - HOST_ROOT=/hostfs
       - NVIDIA_VISIBLE_DEVICES=all

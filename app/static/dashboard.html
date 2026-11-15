@@ -6,27 +6,37 @@
     <title>Aggregator Dashboard</title>
     <style>
         :root {
-            --bg-color: #121212;
-            --card-bg: #1e1e1e;
-            --text-color: #e0e0e0;
-            --accent-color: #00e676;
-            --border-color: #333;
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --accent-color: #38bdf8;
+            --border-color: #334155;
+            --secondary-text: #94a3b8;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -1px rgb(0 0 0 / 0.06);
         }
 
         [data-theme="light"] {
-            --bg-color: #f0f0f0;
+            --bg-color: #f1f5f9;
             --card-bg: #ffffff;
-            --text-color: #202020;
-            --accent-color: #00796b;
-            --border-color: #ccc;
+            --text-color: #0f172a;
+            --accent-color: #0284c7;
+            --border-color: #e2e8f0;
+            --secondary-text: #64748b;
+            --success: #16a34a;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -1px rgb(0 0 0 / 0.06);
         }
 
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 24px;
             transition: background-color 0.3s, color 0.3s;
         }
 
@@ -34,137 +44,233 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-bottom: 20px;
+            padding-bottom: 24px;
             border-bottom: 1px solid var(--border-color);
-            margin-bottom: 30px;
+            margin-bottom: 32px;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
         }
 
         .controls {
             display: flex;
-            gap: 15px;
+            gap: 12px;
             align-items: center;
             flex-wrap: wrap;
         }
 
-        input, select, button {
+        .btn-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        input, select {
             padding: 8px 12px;
-            border-radius: 4px;
+            border-radius: 6px;
             border: 1px solid var(--border-color);
             background-color: var(--card-bg);
             color: var(--text-color);
+            outline: none;
         }
 
         button {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+            color: var(--text-color);
             cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            border-color: var(--accent-color);
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        #addServerBtn {
             background-color: var(--accent-color);
             color: white;
             border: none;
         }
 
-        button:hover {
-            opacity: 0.9;
-        }
-
         .grid-container {
             display: grid;
             gap: 20px;
-            grid-template-columns: repeat(var(--cards-per-row, 1), minmax(300px, 1fr));
+            grid-template-columns: repeat(var(--cards-per-row, 3), minmax(300px, 1fr));
         }
 
         .card {
             background-color: var(--card-bg);
-            padding: 20px;
-            border-radius: 8px;
             border: 1px solid var(--border-color);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
             position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
         }
 
         .card h3 {
-            margin-top: 0;
+            margin: 0;
+            font-size: 18px;
             color: var(--accent-color);
         }
 
-        .stat-row {
+        .card-body .stat-row {
             display: flex;
             justify-content: space-between;
             margin: 8px 0;
-            font-size: 0.9em;
+            font-size: 0.9rem;
         }
 
-        .detail-btn {
-            margin-top: 15px;
-            display: inline-block;
-            padding: 10px;
+        .card-body .stat-label {
+            color: var(--secondary-text);
+        }
+
+        .card-footer {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .detail-link {
+            display: block;
             text-align: center;
-            width: 100%;
+            padding: 8px;
             background-color: var(--border-color);
             color: var(--text-color);
             text-decoration: none;
-            border-radius: 4px;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: all 0.2s;
         }
 
-        .detail-btn:hover {
+        .detail-link:hover {
             background-color: var(--accent-color);
             color: white;
         }
 
-        .status-dot {
-            height: 10px;
-            width: 10px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 5px;
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            color: var(--secondary-text);
         }
 
-        .online { background-color: #4caf50; }
-        .offline { background-color: #f44336; }
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--danger);
+        }
+
+        .dot.on { background: var(--success); }
+
+        .remove-btn {
+            background: transparent;
+            border: none;
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0;
+            line-height: 1;
+        }
+
+        /* Form Styles */
+        #serverForm {
+            display: none;
+            gap: 8px;
+            background: var(--card-bg);
+            padding: 12px;
+            border: 1px solid var(--accent-color);
+            border-radius: 8px;
+            flex-wrap: wrap;
+        }
+
+        .theme-icon {
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            background: var(--card-bg);
+            cursor: pointer;
+        }
     </style>
 </head>
-<body>
+<body data-theme="dark">
     <header>
         <h1>Aggregator Dashboard</h1>
         <div class="controls">
             <select id="layoutSelector">
-                <option value="1">1 card per row</option>
-                <option value="2">2 cards per row</option>
-                <option value="3">3 cards per row</option>
-                <option value="4">4 cards per row</option>
-                <option value="5">5 cards per row</option>
-                <option value="6">6 cards per row</option>
+                <option value="1">1 card / row</option>
+                <option value="2">2 cards / row</option>
+                <option value="3" selected>3 cards / row</option>
+                <option value="4">4 cards / row</option>
+                <option value="5">5 cards / row</option>
+                <option value="6">6 cards / row</option>
             </select>
-            <button id="themeToggle">Toggle Theme</button>
-            <button id="addServerBtn">Add Server</button>
-            <form id="serverForm" style="display:none; gap: 5px;">
-                <input type="text" id="srvName" placeholder="Name" required>
-                <input type="text" id="srvIp" placeholder="IP" required>
-                <input type="number" id="srvPort" placeholder="Port" required>
-                <button type="submit">Add</button>
-            </form>
+            <button id="themeToggle" class="theme-icon">
+                <span id="themeIcon">🌙</span>
+            </button>
+            <div class="btn-group">
+                <button id="addServerBtn">Add Server</button>
+                <form id="serverForm">
+                    <input type="text" id="srvName" placeholder="Name" required>
+                    <input type="text" id="srvIp" placeholder="IP" required>
+                    <input type="number" id="srvPort" placeholder="Port" required>
+                    <button type="submit">Add</button>
+                </form>
+            </div>
         </div>
     </header>
 
-    <div id="grid" class="grid-container" style="--cards-per-row: 1;"></div>
+    <div id="grid" class="grid-container" style="--cards-per-row: 3;"></div>
 
     <script>
         const grid = document.getElementById('grid');
         const layoutSelector = document.getElementById('layoutSelector');
         const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
         const addServerBtn = document.getElementById('addServerBtn');
         const serverForm = document.getElementById('serverForm');
 
         let servers = JSON.parse(localStorage.getItem('monitored_servers')) || [];
 
         // Theme Management
+        function updateThemeUI(theme) {
+            themeIcon.textContent = theme === 'dark' ? '🌙' : '☀️';
+        }
+
         themeToggle.addEventListener('click', () => {
             const current = document.body.getAttribute('data-theme');
             const next = current === 'light' ? 'dark' : 'light';
             document.body.setAttribute('data-theme', next);
             localStorage.setItem('aggregator_theme', next);
+            updateThemeUI(next);
         });
 
         const savedTheme = localStorage.getItem('aggregator_theme') || 'dark';
         document.body.setAttribute('data-theme', savedTheme);
+        updateThemeUI(savedTheme);
 
         // Layout Management
         layoutSelector.addEventListener('change', (e) => {
@@ -208,24 +314,55 @@
             }
         }
 
+        // Initialize default server
+        function initDefaults() {
+            const currentHost = window.location.hostname;
+            const currentPort = window.location.port;
+            
+            // If no servers or local server not in list
+            const hasLocal = servers.some(s => s.ip === currentHost && s.port == currentPort);
+            if (servers.length === 0 || !hasLocal) {
+                const localSrv = {
+                    id: 'local-default',
+                    name: 'Local Server',
+                    ip: currentHost,
+                    port: currentPort
+                };
+                servers.push(localSrv);
+                localStorage.setItem('monitored_servers', JSON.stringify(servers));
+            }
+        }
+
         async function renderDashboard() {
+            initDefaults();
             grid.innerHTML = '';
             for (const srv of servers) {
                 const card = document.createElement('div');
                 card.className = 'card';
                 card.innerHTML = `
-                    <div style="display:flex; justify-content:space-between;">
-                        <h3>${srv.name}</h3>
-                        <button onclick="removeServer('${srv.id}')" style="padding:2px 5px; background:red;">X</button>
+                    <div class="card-header">
+                        <div>
+                            <h3>${srv.name}</h3>
+                            <div class="status-indicator">
+                                <span class="dot" id="dot-${srv.id}"></span>
+                                <span id="status-${srv.id}">Connecting...</span>
+                            </div>
+                        </div>
+                        <button class="remove-btn" onclick="removeServer('${srv.id}')">×</button>
                     </div>
-                    <div id="stats-${srv.id}">Loading...</div>
-                    <a href="http://${srv.ip}:${srv.port}" target="_blank" class="detail-btn">Detail View</a>
+                    <div class="card-body">
+                        <div id="stats-${srv.id}">Loading...</div>
+                    </div>
+                    <div class="card-footer">
+                        <a href="http://${srv.ip}:${srv.port}" target="_blank" class="detail-link">Detail View</a>
+                    </div>
                 `;
                 grid.appendChild(card);
 
                 const statsDiv = card.querySelector(`#stats-${srv.id}`);
+                const dot = card.querySelector(`#dot-${srv.id}`);
+                const statusTxt = card.querySelector(`#status-${srv.id}`);
                 
-                // Poll loop
                 const poll = async () => {
                     const data = await fetchStats(srv.ip, srv.port);
                     if (data && data.ready) {
@@ -233,15 +370,17 @@
                         const mem = data.mem?.pct || 0;
                         const gpu = data.gpus?.length || 0;
                         statsDiv.innerHTML = `
-                            <div class="stat-row"><span>CPU:</span> <span>${cpu}%</span></div>
-                            <div class="stat-row"><span>Mem:</span> <span>${mem}%</span></div>
-                            <div class="stat-row"><span>GPUs:</span> <span>${gpu}</span></div>
-                            <div class="stat-row"><span>Uptime:</span> <span>${Math.round(data.uptime)}s</span></div>
-                            <div class="stat-row"><span>Status:</span> <span class="status-dot online"></span></div>
+                            <div class="stat-row"><span class="stat-label">CPU</span><span>${cpu.toFixed(0)}%</span></div>
+                            <div class="stat-row"><span class="stat-label">Memory</span><span>${mem.toFixed(0)}%</span></div>
+                            <div class="stat-row"><span class="stat-label">GPUs</span><span>${gpu}</span></div>
+                            <div class="stat-row"><span class="stat-label">Uptime</span><span>${Math.round(data.uptime)}s</span></div>
                         `;
+                        dot.classList.add('on');
+                        statusTxt.textContent = 'Online';
                     } else {
-                        statsDiv.innerHTML = `<div class="stat-row"><span>Status:</span> <span class="status-dot offline"></span></div>
-                                              <div class="stat-row"><span>Error:</span> <span>Offline</span></div>`;
+                        statsDiv.innerHTML = `<div class="stat-row"><span class="stat-label">Error</span><span>Offline</span></div>`;
+                        dot.classList.remove('on');
+                        statusTxt.textContent = 'Offline';
                     }
                 };
 

@@ -292,8 +292,8 @@
         const serverForm = document.getElementById('serverForm');
 
         let servers = JSON.parse(localStorage.getItem('monitored_servers')) || [];
-        const charts = {};
-        const histories = {};
+        let charts = {};
+        let histories = {};
 
         // Theme Management
         function updateThemeUI(theme) {

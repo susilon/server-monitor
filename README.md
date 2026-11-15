@@ -66,6 +66,7 @@ Set these as environment variables (a `.env` file next to the compose file, or C
 | `INTERVAL` | `2` | Seconds between samples. The browser polls every 2 seconds regardless. |
 | `HOST_ROOT` | `/hostfs` | Where the host filesystem is mounted inside the container. Change only if you change the volume. |
 | `DRM_PATH` | `/sys/class/drm` | Where AMD GPUs are read from. Mainly useful for testing. |
+| `DASHBOARD_ORIGIN` | `*` | CORS origin for dashboard-to-server requests. Set to your dashboard URL (e.g., `http://100.97.13.76:8787`) for production, or keep `*` for development. |
 
 ## Deploying on Coolify
 
@@ -100,6 +101,7 @@ server-monitor/
 - **There is no authentication.** The dashboard exposes hardware details, IP addresses, mount points and (on NVIDIA) GPU process names. Keep it on a private network such as Tailscale or your LAN, firewall the port, or put it behind a reverse proxy with authentication.
 - The container runs as root with the host filesystem mounted read-only, the host PID namespace, the host network, and `SYS_PTRACE`. This access is what makes host monitoring possible, but it is broad. Do not expose the container to the internet, and do not add other services to it.
 - The app only reads data. It does not write to the host filesystem or run commands from user input.
+- **CORS Configuration:** The backend allows cross-origin requests from the dashboard. In production, set `DASHBOARD_ORIGIN` to your dashboard's exact origin (e.g., `http://100.97.13.76:8787`) instead of the wildcard `*`. This prevents unauthorized servers from accessing your monitoring data.
 
 ## Troubleshooting
 

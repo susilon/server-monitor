@@ -3,15 +3,26 @@ import psutil
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 
 HOST = os.environ.get("HOST_ROOT", "/hostfs")
 INTERVAL = float(os.environ.get("INTERVAL", "2"))
 REAL_FS = {"ext2", "ext3", "ext4", "xfs", "btrfs", "zfs", "vfat", "exfat", "ntfs", "ntfs3",
-           "f2fs", "fuseblk", "nfs", "nfs4", "cifs"}
+            "f2fs", "fuseblk", "nfs", "nfs4", "cifs"}
 SKIP_NIC = ("veth", "br-", "docker", "lo")
 DRM = os.environ.get("DRM_PATH", "/sys/class/drm")
 
 app = FastAPI()
+
+# CORS middleware - allow requests from dashboard origin
+dashboard_origin = os.environ.get("DASHBOARD_ORIGIN", "*")  # Default to wildcard for flexibility
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[dashboard_origin] if dashboard_origin != "*" else ["*"],
+    allow_credentials=dashboard_origin != "*",
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 state = {"ready": False}
 
 

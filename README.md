@@ -132,4 +132,4 @@ This software is provided **"as is"**, without warranty of any kind, express or 
 
 ## License
 
-No license file is included. Add one (for example MIT) before sharing or publishing this project.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

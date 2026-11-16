@@ -253,7 +253,7 @@
 </head>
 <body data-theme="dark">
     <header>
-        <h1>Aggregator Dashboard</h1>
+        <h1>All Servers Dashboard</h1>
         <div class="controls">
             <select id="layoutSelector">
                 <option value="1">1 card / row</option>
@@ -261,7 +261,6 @@
                 <option value="3" selected>3 cards / row</option>
                 <option value="4">4 cards / row</option>
                 <option value="5">5 cards / row</option>
-                <option value="6">6 cards / row</option>
             </select>
             <button id="themeToggle" class="theme-icon">
                 <span id="themeIcon">
@@ -314,8 +313,13 @@
         updateThemeUI(savedTheme);
 
         // Layout Management
+        const savedLayout = localStorage.getItem('aggregator_layout') || '3';
+        layoutSelector.value = savedLayout;
+        grid.style.setProperty('--cards-per-row', savedLayout);
+
         layoutSelector.addEventListener('change', (e) => {
             grid.style.setProperty('--cards-per-row', e.target.value);
+            localStorage.setItem('aggregator_layout', e.target.value);
         });
 
         // Server Management

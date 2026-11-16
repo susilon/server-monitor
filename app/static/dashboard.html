@@ -268,15 +268,18 @@
                     <svg id="icon-light" class="theme-svg" viewBox="0 0 32 32" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M16,12a4,4,0,1,1-4,4,4.0045,4.0045,0,0,1,4-4m0-2a6,6,0,1,0,6,6,6,6,0,0,0-6-6Z" transform="translate(0 0.0049)"/><rect x="6.8536" y="5.3745" width="1.9998" height="4.958" transform="translate(-3.253 7.8584) rotate(-45)"/><rect x="2" y="15.0049" width="5" height="2"/><rect x="5.3745" y="23.1466" width="4.958" height="1.9998" transform="translate(-14.7739 12.6305) rotate(-45)"/><rect x="15" y="25.0049" width="2" height="5"/><rect x="23.1466" y="21.6675" width="1.9998" height="4.958" transform="translate(-10.0018 24.1514) rotate(-45)"/><rect x="25" y="15.0049" width="5" height="2"/><rect x="21.6675" y="6.8536" width="4.958" height="1.9998" transform="translate(1.5191 19.3793) rotate(-45)"/><rect x="15" y="2.0049" width="2" height="5"/></svg>
                 </span>
             </button>
-            <div class="btn-group">
-                <button id="addServerBtn">Add Server</button>
-                <form id="serverForm">
-                    <input type="text" id="srvName" placeholder="Name" required>
-                    <input type="text" id="srvIp" placeholder="IP" required>
-                    <input type="number" id="srvPort" placeholder="Port" required>
-                    <button type="submit">Add</button>
-                </form>
-            </div>
+    <div class="btn-group">
+        <button id="addServerBtn">Add Server</button>
+        <button id="exportSettingsBtn">Export</button>
+        <button id="importSettingsBtn">Import</button>
+        <input type="file" id="importSettingsInput" style="display:none" accept=".json">
+        <form id="serverForm">
+            <input type="text" id="srvName" placeholder="Name" required>
+            <input type="text" id="srvIp" placeholder="IP" required>
+            <input type="number" id="srvPort" placeholder="Port" required>
+            <button type="submit">Add</button>
+        </form>
+    </div>
         </div>
     </header>
 
@@ -342,6 +345,58 @@
             serverForm.style.display = 'none';
             addServerBtn.textContent = 'Add Server';
             renderDashboard();
+        });
+
+        // Export/Import Settings
+        document.getElementById('exportSettingsBtn').addEventListener('click', () => {
+            const settings = {
+                theme: localStorage.getItem('aggregator_theme') || 'dark',
+                layout: localStorage.getItem('aggregator_layout') || '3',
+                servers: JSON.parse(localStorage.getItem('monitored_servers') || '[]')
+            };
+            const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'dashboard_settings.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        document.getElementById('importSettingsBtn').addEventListener('click', () => {
+            document.getElementById('importSettingsInput').click();
+        });
+
+        document.getElementById('importSettingsInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const settings = JSON.parse(event.target.result);
+                    if (settings.theme) {
+                        document.body.setAttribute('data-theme', settings.theme);
+                        localStorage.setItem('aggregator_theme', settings.theme);
+                        updateThemeUI(settings.theme);
+                    }
+                    if (settings.layout) {
+                        layoutSelector.value = settings.layout.toString();
+                        grid.style.setProperty('--cards-per-row', settings.layout.toString());
+                        localStorage.setItem('aggregator_layout', settings.layout.toString());
+                    }
+                    if (settings.servers) {
+                        servers = settings.servers;
+                        localStorage.setItem('monitored_servers', JSON.stringify(servers));
+                    }
+                    renderDashboard();
+                    alert('Settings imported successfully!');
+                } catch (err) {
+                    alert('Failed to import settings. Invalid file format.');
+                    console.error(err);
+                }
+            };
+            reader.readAsText(file);
         });
 
         function removeServer(id) {

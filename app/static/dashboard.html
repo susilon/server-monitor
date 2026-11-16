@@ -393,6 +393,15 @@
     return parts.length > 0 ? parts.join(', ') : '0 minutes';
 }
 
+function formatBytes(bytes, decimals = 2) {
+    if (!+bytes) return '0 Bytes'
+    const k = 1024
+    const dm = decimals < 0 ? 0 : decimals
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
+    const i = Math.floor(Math.log(Math.abs(bytes)) / Math.log(k))
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`
+}
+
         async function renderDashboard() {
             charts = {};
             histories = {};
@@ -461,7 +470,7 @@
                 const poll = async () => {
                     try {
                         const data = await fetchStats(srv.ip, srv.port);
-                        if (data && (data.ready || data.cpu || data.mem)) {
+                        if (data && (data.ready || data.cpu || data.mem || data.disks)) {
                             const cpu = data.cpu?.pct || 0;
                             const mem = data.mem?.pct || 0;
                             
@@ -470,11 +479,19 @@
                             const avgGpuUtil = gpus.length > 0 
                                 ? Math.round(gpus.reduce((sum, gpu) => sum + (gpu.util || 0), 0) / gpus.length)
                                 : 0;
+
+                            let disksHtml = '';
+                            if (data.disks && Array.isArray(data.disks)) {
+                                disksHtml = data.disks.map(disk => `
+                                    <div class="stat-row"><span class="stat-label">Disk</span><span>${disk.pct.toFixed(1)}% (${formatBytes(disk.used)}/${formatBytes(disk.total)})</span></div>
+                                `).join('');
+                            }
                             
                             statsDiv.innerHTML = `
                                 <div class="stat-row"><span class="stat-label">CPU</span><span>${cpu.toFixed(0)}%</span></div>
                                 <div class="stat-row"><span class="stat-label">Memory</span><span>${mem.toFixed(0)}%</span></div>
                                 <div class="stat-row"><span class="stat-label">GPU Utilization</span><span>${avgGpuUtil}%</span></div>
+                                ${disksHtml}
                                 <div class="stat-row"><span class="stat-label">Uptime</span><span>${formatUptime(data.uptime)}</span></div>
                             `;
                             dot.classList.add('on');

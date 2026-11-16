@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Server status</title>
 <style>
-:root{--bg:#0e1319;--panel:#161d26;--line:#243040;--text:#d9e2ec;--muted:#7f90a3;--ok:#4cc3d9;--warn:#f2b84b;--crit:#ef6b5f;color-scheme:dark}
-@media (prefers-color-scheme:light){:root{--bg:#eef2f6;--panel:#fff;--line:#d5dde6;--text:#17212b;--muted:#5d6e80;--ok:#0e8aa3;--warn:#b7791f;--crit:#c53030;color-scheme:light}}
+:root{color-scheme:dark;--bg:#0e1319;--panel:#161d26;--line:#243040;--text:#d9e2ec;--muted:#7f90a3;--ok:#4cc3d9;--warn:#f2b84b;--crit:#ef6b5f}
+body[data-theme="light"]{--bg:#eef2f6;--panel:#fff;--line:#d5dde6;--text:#17212b;--muted:#5d6e80;--ok:#0e8aa3;--warn:#b7791f;--crit:#c53030;color-scheme:light}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 header{display:flex;flex-wrap:wrap;gap:6px 28px;align-items:baseline;padding:18px 24px;border-bottom:1px solid var(--line)}
@@ -50,7 +50,10 @@ th{color:var(--muted)}td.n,th.n{text-align:right;font-variant-numeric:tabular-nu
   <h1 id="host">Server status</h1>
   <span><i id="dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--crit);margin-right:6px"></i><b id="conn">Connecting</b></span>
   <span id="up"></span><span id="load"></span>
-  <a href="/dashboard" style="margin-left:20px; color:var(--ok); text-decoration:none; border:1px solid var(--ok); padding:4px 8px; border-radius:4px; font-size:12px;">Aggregator</a>
+  <div style="margin-left:auto; display:flex; gap:12px; align-items:center">
+    <button id="themeToggle" style="background:none;border:none;color:var(--text);cursor:pointer;font-size:20px;padding:0;">🌓</button>
+    <a href="/dashboard" style="color:var(--ok); text-decoration:none; border:1px solid var(--ok); padding:4px 8px; border-radius:4px; font-size:12px;">Aggregator</a>
+  </div>
 </header>
 <main id="app"></main>
 <script>
@@ -118,6 +121,17 @@ async function tick() {
   } catch { $('#dot').className = ''; $('#conn').textContent = 'Disconnected' }
 }
 tick(); setInterval(tick, 2000);
+
+        // Theme management
+        const themeToggle = $('#themeToggle');
+        const currentTheme = localStorage.getItem('aggregator_theme') || 'dark';
+        document.body.setAttribute('data-theme', currentTheme);
+
+        themeToggle.addEventListener('click', () => {
+            const newTheme = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('aggregator_theme', newTheme);
+        });
 </script>
 </body>
 </html>
